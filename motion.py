@@ -1,6 +1,6 @@
 import cv2
 import imutils
-
+#from tutorial https://www.pyimagesearch.com/2015/05/25/basic-motion-detection-and-tracking-with-python-and-opencv/
 class BasicMotionDetector:
     def __init__(self, accumWeight=0.5, deltaThresh=5, minArea=5000):
         # determine the OpenCV version, followed by storing the

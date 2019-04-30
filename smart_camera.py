@@ -4,8 +4,10 @@ import time
 import datetime
 import numpy as np
 import sys
+from smart_camera_services import Cloud_Components
+from threading import Thread
 
-
+cloud_service = Cloud_Components('b3d30542a678bdc4b324adadbda35283-dc5f81da-74721564', 'sandbox24ef91fac1c64d1c976dfe3e8b912b18.mailgun.org', 'Rishov Dutta <rsdutta2@illinois.edu>', 'DhHEQ1Ie2qAAAAAAAAAACZ_zsdvAzb8kungzHGW-yg4VlMjxA4d7PIvK1MH1_eGW')
 class smart_camera(object):
     def __init__(self, tracking_type, cam_number):
         self.capture = cv2.VideoCapture(cam_number)
@@ -15,6 +17,8 @@ class smart_camera(object):
         self.basic_motion = BasicMotionDetector()
         self.faceCascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
         self.cam_number = cam_number
+        self.smart_camera_email = 0
+        self.smart_camera_dropbox = 0
 
     def get_processed_frame(self):
         ret, img = self.capture.read()
@@ -25,6 +29,7 @@ class smart_camera(object):
 
 
     def motion_tracking(self, img):
+        detection_flag = False
         if self.cam_number == 0:
             cam_num = 1
         else:
@@ -35,6 +40,7 @@ class smart_camera(object):
         if len(locs) > 0:
             # initialize the minimum and maximum (x, y)-coordinates,
             # respectively
+            detection_flag = True
             (minX, minY) = (np.inf, np.inf)
             (maxX, maxY) = (-np.inf, -np.inf)
 
@@ -63,11 +69,19 @@ class smart_camera(object):
         (10, img.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
 
         # loop over the frames a second time
+        if detection_flag:
+            if time.time() - self.smart_camera_email > 300 or self.smart_camera_email == 0:
+                self.smart_camera_email = time.time()
+                Thread(target=cloud_service.send_email, args=(self.cam_number, self.tracking_type)).start()
+            if time.time() - self.smart_camera_dropbox > 1.5 or self.smart_camera_dropbox == 0:
+                self.smart_camera_dropbox = time.time()
+                Thread(target=cloud_service.upload_file, args=(img, self.cam_number)).start()
         ret, jpeg = cv2.imencode('.jpg', img)
+        cv2.imwrite("wtf.jpg", img)
         return jpeg.tobytes()
-        #cv2.imshow("Motion Tracking " + str(self.cam_number), img)
     
     def face_detection(self, img):
+        detection_flag = False
         if self.cam_number == 0:
             cam_num = 1
         else:
@@ -83,6 +97,7 @@ class smart_camera(object):
             cv2.rectangle(img,(x,y),(x+w,y+h),(0,0,255),3)
             roi_gray = gray[y:y+h, x:x+w]
             roi_color = img[y:y+h, x:x+w]
+            detection_flag = True
         
         timestamp = datetime.datetime.now()
         ts = timestamp.strftime("%A %d %B %Y %I:%M:%S%p")
@@ -92,21 +107,13 @@ class smart_camera(object):
         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         cv2.putText(img, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
         (10, img.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1)
+        if detection_flag:
+            if time.time() - self.smart_camera_email > 300 or self.smart_camera_email == 0:
+                self.smart_camera_email = time.time()
+                Thread(target=cloud_service.send_email, args=(self.cam_number, self.tracking_type)).start()
+            if time.time() - self.smart_camera_dropbox > 5 or self.smart_camera_dropbox == 0:
+                self.smart_camera_dropbox = time.time()
+                Thread(target=cloud_service.upload_file, args=(img, self.cam_number)).start()
         ret, jpeg = cv2.imencode('.jpg', img)
         return jpeg.tobytes()
-        #cv2.imshow('Face Tracking ' + str(self.cam_number),img)
-
-#cam1 = smart_camera("face", 0)
-#cam2 = smart_camera("motion", 2)
-
-
-#while True:
-   #cam1.get_processed_frame()
- #   cam2.get_processed_frame()
-    
-  #  key = cv2.waitKey(1) & 0xFF
-
-        # if the `q` key was pressed, break from the loop
-   # if key == ord("q"):
-    #    break
-
+        
