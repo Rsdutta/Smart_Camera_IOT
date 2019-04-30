@@ -15,8 +15,9 @@ class Cloud_Components:
         self.mailgun_url = 'https://api.mailgun.net/v2/{}/messages'.format(self.mailgun_sandbox)    
 
     def upload_file(self, img, cam_number):
+        if cam_number == 0:
+            cam_number = 1
         name = '{}.png'.format(datetime.now().strftime("%m-%d-%Y, %H:%M:%S"))
-        print name
         status = cv2.imwrite("test.jpg", img)
         with open('test.jpg', 'rb') as f:
             self.dropbox_instance.files_upload(f.read(), '/camera_{}/{}'.format(cam_number, name))
@@ -24,6 +25,8 @@ class Cloud_Components:
         pass
 
     def send_email(self, cam_number, detection_type):
+        if cam_number == 0:
+            cam_number = 1
         request = requests.post(self.mailgun_url, auth=('api', self.mailgun_key), data={
             'from': 'Mailgun Sandbox <postmaster@{}>'.format(self.mailgun_sandbox),
             'to': self.mailgun_recipient,
